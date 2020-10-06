@@ -32,7 +32,8 @@ namespace Build
                 "https://www.myget.org/F/30de4ee06dd54956a82013fa17a3accb/",
                 "https://www.myget.org/F/xunit/api/v3/index.json",
                 "https://dotnet.myget.org/F/aspnetcore-dev/api/v3/index.json",
-                "https://azfunc.pkgs.visualstudio.com/e6a70c92-4128-439f-8012-382fe78d6396/_packaging/Microsoft.Azure.Functions.PowerShellWorker/nuget/v3/index.json"
+                "https://azfunc.pkgs.visualstudio.com/e6a70c92-4128-439f-8012-382fe78d6396/_packaging/Microsoft.Azure.Functions.PowerShellWorker/nuget/v3/index.json",
+                "https://azfunc.pkgs.visualstudio.com/e6a70c92-4128-439f-8012-382fe78d6396/_packaging/AzureFunctionsPreRelease/nuget/v3/index.json"
             }
             .Aggregate(string.Empty, (a, b) => $"{a} --source {b}");
 
@@ -43,10 +44,10 @@ namespace Build
         {
             if (string.IsNullOrEmpty(Settings.IntegrationBuildNumber))
             {
-                ColoredConsole.Error.WriteLine($"Environment variable 'integrationBuildNumber' cannot be null or empty for an integration build.");
+                throw new Exception($"Environment variable 'integrationBuildNumber' cannot be null or empty for an integration build.");
             }
 
-            var feed = "https://azfunc.pkgs.visualstudio.com/e6a70c92-4128-439f-8012-382fe78d6396/_packaging/AzureFunctionsPreRelease/nuget/v3/index.json";
+            const string AzureFunctionsPreReleaseFeedName = "https://azfunc.pkgs.visualstudio.com/e6a70c92-4128-439f-8012-382fe78d6396/_packaging/AzureFunctionsPreRelease/nuget/v3/index.json";
             var packagesToUpdate = GetV3PackageList();
             string currentDirectory = null;
 
@@ -62,18 +63,18 @@ namespace Build
 
                 foreach (var package in packagesToUpdate)
                 {
-                    string packageInfo = Shell.GetOutput("NuGet", $"list {package} -Source {feed} -prerelease").Split(Environment.NewLine)[0];
+                    string packageInfo = Shell.GetOutput("NuGet", $"list {package} -Source {AzureFunctionsPreReleaseFeedName} -prerelease").Split(Environment.NewLine)[0];
 
                     if (string.IsNullOrEmpty(packageInfo))
                     {
-                        ColoredConsole.Error.WriteLine($"Failed to get {package} package information from {feed}.");
+                        throw new Exception($"Failed to get {package} package information from {AzureFunctionsPreReleaseFeedName}.");
                     }
 
                     var parts = packageInfo.Split(" ");
                     var packageName = parts[0];
                     var packageVersion = parts[1];
 
-                    Shell.Run("dotnet", $"add package {packageName} -v {packageVersion} -s {feed} --no-restore");
+                    Shell.Run("dotnet", $"add package {packageName} -v {packageVersion} -s {AzureFunctionsPreReleaseFeedName} --no-restore");
 
                     buildPackages.Add(packageName, packageVersion);
                 }
@@ -136,6 +137,11 @@ namespace Build
                 {
                     RemoveLanguageWorkers(outputPath);
                 }
+            }
+
+            if (!string.IsNullOrEmpty(Settings.IntegrationBuildNumber) && (_manifest != null))
+            {
+                _manifest.CommitId = Settings.CommitId;
             }
         }
 
@@ -555,14 +561,8 @@ namespace Build
 
         public static void CreateIntegrationTestsBuildManifest()
         {
-            if (!string.IsNullOrEmpty(Settings.IntegrationBuildNumber))
+            if (!string.IsNullOrEmpty(Settings.IntegrationBuildNumber) && (_manifest != null))
             {
-                if (_manifest == null)
-                {
-                    // This should never be the case. The initialization takes place in UpdatePackageVersionsForIntegrationTests.
-                    _manifest = new IntegrationTestBuildManifest();
-                }
-
                 _manifest.CoreToolsVersion = _version;
                 _manifest.Build = Settings.IntegrationBuildNumber;
 
@@ -574,8 +574,8 @@ namespace Build
 
         private static List<string> GetV3PackageList()
         {
-            var filePath = "https://raw.githubusercontent.com/Azure/azure-functions-integration-tests/dev/integrationTestsBuild/V3/CoreToolsBuild.json";
-            Uri address = new Uri(filePath);
+            const string CoreToolsBuildPackageList = "https://raw.githubusercontent.com/Azure/azure-functions-integration-tests/dev/integrationTestsBuild/V3/CoreToolsBuild.json";
+            Uri address = new Uri(CoreToolsBuildPackageList);
 
             string content = null;
             using (var client = new WebClient())
@@ -585,19 +585,12 @@ namespace Build
 
             if (string.IsNullOrEmpty(content))
             {
-                ColoredConsole.Error.WriteLine($"Failed to download package list from {filePath}");
+                throw new Exception($"Failed to download package list from {CoreToolsBuildPackageList}");
             }
 
             var packageList = JsonConvert.DeserializeObject<List<string>>(content);
 
             return packageList;
         }
-    }
-
-    internal class IntegrationTestBuildManifest
-    {
-        public string Build { get; set; }
-        public Dictionary<string, string> Packages { get; set; }
-        public string CoreToolsVersion { get; set; }
     }
 }

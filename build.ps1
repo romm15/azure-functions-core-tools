@@ -6,15 +6,23 @@ if (-not (Test-Path $buildFolderPath))
 
 Set-Location $buildFolderPath
 
-$command = $null
-if ($env:INTEGRATIONBUILDNUMBER)
+$buildCommand = $null
+
+if ($env:IntegrationBuildNumber)
 {
-    $command = "dotnet run --integrationTests"
+    if (-not ($env:IntegrationBuildNumber -like "PreRelease*-*"))
+    {
+        $integrationBuildNumberExample = "PreRelease" + (Get-Date -Format "yyMMdd-HHmm")
+        $errorMessage = "IntegrationBuildNumber '$env:IntegrationBuildNumber' format is invalid. It should be of the form '$integrationBuildNumberExample'."
+        throw $errorMessage
+    }
+
+    $buildCommand = "dotnet run --integrationTests"
 }
 else
 {
-    $command = "dotnet run --ci"
+    $buildCommand = "dotnet run --ci"
 }
 
-Invoke-Expression -Command $command
+Invoke-Expression -Command $buildCommand
 if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode)  }

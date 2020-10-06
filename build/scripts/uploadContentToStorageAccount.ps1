@@ -131,7 +131,7 @@ foreach ($path in @($latestDestinationPath, $versionDestinationPath))
 
         try
         {
-            WriteLog -Message "Uploading $fileName..."
+            WriteLog -Message "Uploading '$fileName' to '$destinationPath'."
 
             Set-AzStorageBlobContent -File $file `
                                      -Container $CONTAINER_NAME `
