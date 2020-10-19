@@ -222,11 +222,7 @@ namespace Azure.Functions.Cli.Actions.HostActions
             bool userSecretsEnabled = !string.IsNullOrEmpty(UserSecretsId);
             if (userSecretsEnabled)
             {
-                var configureBuilder = new UserSecretsConfigurationBuilder(UserSecretsId, new LoggingFilterHelper(_hostJsonConfig, VerboseLogging), new LoggerFilterOptions());
-                var configurationBuilder = new ConfigurationBuilder();
-                configureBuilder.Configure(configurationBuilder);
-                var root = configurationBuilder.Build();
-                userSecrets = root.AsEnumerable();
+                userSecrets = Utilities.BuildUserSecrets(UserSecretsId, _hostJsonConfig, VerboseLogging);
             }
 
             await CheckNonOptionalSettings(settings.Union(environment).Union(userSecrets), scriptPath, userSecretsEnabled);

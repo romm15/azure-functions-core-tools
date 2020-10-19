@@ -18,7 +18,10 @@ namespace Azure.Functions.Cli.Helpers
                 return null;
             }
             string projectFilePath = ProjectHelpers.FindProjectFile(scriptPath, loggingFilterHelper, loggerFilterOptions);
-            if (projectFilePath == null) return null;
+            if (projectFilePath == null)
+            {
+                return null;
+            }
 
             var projectRoot = ProjectHelpers.GetProject(projectFilePath);
             var userSecretsId = ProjectHelpers.GetPropertyValue(projectRoot, Constants.UserSecretsIdElementName);
