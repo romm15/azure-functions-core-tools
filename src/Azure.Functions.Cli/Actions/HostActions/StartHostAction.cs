@@ -380,13 +380,6 @@ namespace Azure.Functions.Cli.Actions.HostActions
         {
             try
             {
-                string orConfigSources = $"{SecretsManager.AppSettingsFileName}", andConfigSources = $"{SecretsManager.AppSettingsFileName}";
-                if (userSecretsEnabled)
-                {
-                    orConfigSources = orConfigSources + " or User Secrets";
-                    andConfigSources = andConfigSources + " and User Secrets";
-                }
-
                 // FirstOrDefault returns a KeyValuePair<string, string> which is a struct so it can't be null.
                 var azureWebJobsStorage = secrets.FirstOrDefault(pair => pair.Key.Equals("AzureWebJobsStorage", StringComparison.OrdinalIgnoreCase)).Value;
                 var functionJsonFiles = await FileSystemHelpers
@@ -410,9 +403,11 @@ namespace Azure.Functions.Cli.Actions.HostActions
 
                 if (string.IsNullOrWhiteSpace(azureWebJobsStorage) && !allNonStorageTriggers)
                 {
-                    throw new CliException($"Missing value for AzureWebJobsStorage in {andConfigSources}. " +
-                        $"This is required for all triggers other than {string.Join(", ", Constants.TriggersWithoutStorage)}. "
-                        + $"You can run 'func azure functionapp fetch-app-settings <functionAppName>' or specify a connection string in {orConfigSources}.");
+                    string errorMessage = userSecretsEnabled ? Constants.Errors.WebJobsStorageNotFoundWithUserSecrets : Constants.Errors.WebJobsStorageNotFound;
+                    throw new CliException(string.Format(errorMessage,
+                                                         SecretsManager.AppSettingsFileName,
+                                                         string.Join(", ", Constants.TriggersWithoutStorage),
+                                                         SecretsManager.AppSettingsFileName));
                 }
 
                 foreach ((var filePath, var functionJson) in functionsJsons)
@@ -430,9 +425,14 @@ namespace Azure.Functions.Cli.Actions.HostActions
                                 }
                                 else if (!secrets.Any(v => v.Key.Equals(appSettingName, StringComparison.OrdinalIgnoreCase)))
                                 {
-                                    ColoredConsole
-                                        .WriteLine(WarningColor($"Warning: Cannot find value named '{appSettingName}' in {orConfigSources} that matches '{token.Key}' property set on '{binding["type"]?.ToString()}' in '{filePath}'. " +
-                                            $"You can run 'func azure functionapp fetch-app-settings <functionAppName>' or specify a connection string in {orConfigSources}."));
+                                    string warningMessage = userSecretsEnabled ? Constants.Errors.AppSettingNotFoundWithUserSecrets : Constants.Errors.AppSettingNotFound;
+                                    ColoredConsole.WriteLine(WarningColor(string.Format(warningMessage,
+                                                                                        appSettingName,
+                                                                                        SecretsManager.AppSettingsFileName,
+                                                                                        token.Key,
+                                                                                        binding["type"]?.ToString(),
+                                                                                        filePath,
+                                                                                        SecretsManager.AppSettingsFileName)));
                                 }
                             }
                         }
