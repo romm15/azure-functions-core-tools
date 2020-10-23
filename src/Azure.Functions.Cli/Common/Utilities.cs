@@ -17,6 +17,7 @@ using Microsoft.Azure.WebJobs.Script.Workers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using static Azure.Functions.Cli.Common.OutputTheme;
 
 namespace Azure.Functions.Cli
 {
@@ -49,6 +50,12 @@ namespace Azure.Functions.Cli
                 .WriteLine($"\nAzure Functions Core Tools")
                 .WriteLine($"Core Tools Version:       {Constants.CliDetailedVersion}".DarkGray())
                 .WriteLine($"Function Runtime Version: {ScriptHost.Version}\n".DarkGray());
+        }
+
+        internal static void PrintUpgradeWarning()
+        {
+            ColoredConsole
+                .WriteLine(ErrorColor("You are using Azure Functions Core Tools 2.x. To ensure that you are using the latest version and your application is compatible with an upcoming platform upgrade, we recommend you upgrade to Azure Functions Core Tools 3.x. To learn more, see https://aka.ms/func-v2-upgrade\n"));
         }
 
         private static RichString AlternateLogoColor(string str, int firstColorCount = -1)

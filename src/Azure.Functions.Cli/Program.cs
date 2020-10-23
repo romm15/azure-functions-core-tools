@@ -15,6 +15,7 @@ namespace Azure.Functions.Cli
             FirstTimeCliExperience();
             SetupGlobalExceptionHandler();
             SetCoreToolsEnvironmentVaraibles();
+            Utilities.PrintUpgradeWarning();
             ConsoleApp.Run<Program>(args, InitializeAutofacContainer());
         }
 
